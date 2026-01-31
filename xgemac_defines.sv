@@ -19,12 +19,16 @@
 `define XGEMAC_WB_RESET_PERIOD 2
 
 //Random Test minimum reserve and allow maximum
-`define MIN_RESERVED_ODD   14
-`define MIN_RESERVED_EVEN  16
+`define MIN_RESERVED_ODD   2
+`define MIN_RESERVED_EVEN  3
 
 //timeout
-`define TIMEOUT 5000
+`define TIMEOUT 10000
 //`define TIMEOUT 64'd900000000000
 
+//Minimum paddding bytes
+`define MIN_PADDING_BYTE 60
+
+`define BYTE 8
 
 

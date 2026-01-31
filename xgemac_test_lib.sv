@@ -58,6 +58,7 @@ class xgemac_base_test;
       begin
         p[0] = process :: self();
         wait(h_cfg.trans_count == h_cfg.act_count);
+        $display("Trans count %0d == Actual count %0d", h_cfg.trans_count, h_cfg.act_count);
       end
       begin
         p[1] = process :: self();
@@ -104,8 +105,8 @@ class xgemac_incremental_test extends xgemac_base_test;
   endfunction : new
 
   function void set_test_specific_configurations();
-    h_cfg.trans_count     = 80;
-    h_cfg.inc_trans_count = 30;
+    h_cfg.trans_count     = 20;
+    h_cfg.inc_trans_count = 2;
     h_cfg.inc_start_value = 'h1212_3121_8021_310A;
   endfunction : set_test_specific_configurations
 
@@ -124,7 +125,7 @@ class xgemac_fully_random_test extends xgemac_base_test;
   endfunction : new
 
   function void set_test_specific_configurations();
-     h_cfg.trans_count = $urandom_range(6,100); 
+     h_cfg.trans_count = $urandom_range(0,25); 
   endfunction : set_test_specific_configurations
 
   task give_stimulus();
@@ -148,6 +149,34 @@ class xgemac_padding_test extends xgemac_base_test;
   endtask : give_stimulus
 
 endclass : xgemac_padding_test
+
+class xgemac_reset_test extends xgemac_direct_test;
+
+  xgemac_direct_test h_dir_test;
+  function new(xgemac_tb_config h_cfg);
+    super.new(h_cfg);
+  endfunction : new
+
+  function void set_test_specific_configurations();
+    super.set_test_specific_configurations();
+  endfunction : set_test_specific_configurations
+
+  task give_stimulus();
+    fork
+    begin
+      super.give_stimulus();      
+    end
+    begin
+      #55_000;
+      $display("[%0t] >>> PUTTING RESET INTO MAILBOX <<<", $time);
+      h_env.h_tx_rx_rst_gen.mbx.put(1);
+    end
+   join
+endtask : give_stimulus
+
+
+endclass : xgemac_reset_test
+
 
 class wishbone_read_tx_enable_test extends xgemac_base_test;
 

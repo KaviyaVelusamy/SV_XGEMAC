@@ -3,6 +3,7 @@ class xgemac_scoreboard;
   xgemac_tb_config h_cfg;
   mailbox#(xgemac_tx_pkt) tx_mbx;
   mailbox#(xgemac_rx_pkt) rx_mbx;
+  mailbox#(bit)           rst_mbx;
 
   xgemac_tx_pkt exp_pkt_queue[$];
 
@@ -65,13 +66,22 @@ class xgemac_scoreboard;
         begin
           wait_for_rx_pkt();
         end
+        begin
+          wait_for_reset();
+        end
       join_none
     end
   endtask : run
 
   //task wait for reset
   task wait_for_reset();
-    
+    bit rst_indicator;
+    forever
+    begin
+      rst_mbx.get(rst_indicator);
+      h_cfg.act_count += exp_pkt_queue.size();
+      exp_pkt_queue.delete();
+    end    
   endtask : wait_for_reset
 
 
@@ -84,7 +94,7 @@ class xgemac_scoreboard;
     forever
       begin
         tx_mbx.get(h_tx_pkt);
-        if(h_cfg.trans_count > 7)
+        if(h_cfg.tx_trans_count > 7)
         begin
         if(h_tx_pkt.pkt_tx_mod != 0)
           begin
@@ -108,7 +118,7 @@ class xgemac_scoreboard;
     forever 
       begin
         rx_mbx.get(h_rx_pkt);
-        if(h_cfg.trans_count > 7)
+        if(h_cfg.tx_trans_count > 7)
         begin
         if(h_rx_pkt.pkt_rx_mod != 0)
           begin
@@ -121,17 +131,15 @@ class xgemac_scoreboard;
         $cast(h_rx_cl_pkt, h_rx_pkt.clone());
         $display("From RX Monitor to Scoreboard");
         h_rx_cl_pkt.display();
-        if(h_cfg.trans_count > 7)
-          begin
-            check_exp_data_and_act_data(h_rx_cl_pkt);
-            h_cfg.act_count++;
-          end
-        else
+        check_exp_data_and_act_data(h_rx_cl_pkt);
+        h_cfg.act_count++;
+        
+      /*  else
           begin
             check_exp_data_and_act_data_padding(h_rx_cl_pkt);
             h_cfg.act_count ++;
-          end
-          $display("!!!!!!!!!!!!!!ACTUAL_COUNT %0h!!!!!!!!!!!!!!!!!", h_cfg.act_count);
+          end */
+          $display("!!!!!!!!!!!!!!ACTUAL_COUNT %0d!!!!!!!!!!!!!!!!!", h_cfg.act_count);
        // h_cfg.act_count++;
       end
   endtask : wait_for_rx_pkt
@@ -152,8 +160,9 @@ class xgemac_scoreboard;
     static int success_count = 0;
     if(exp_pkt_queue.size() > 0)
     begin
-    h_tx_pkt = exp_pkt_queue.pop_front();
-    $display("&&&&&&&&&&&Queue size is not zero&&&&&&&&&&&&");
+      h_tx_pkt = exp_pkt_queue.pop_front();
+      //$display("&&&&&&&&&&&Queue size is not zero&&&&&&&&&&&&");
+    end
     if(h_tx_pkt.pkt_tx_sop != h_rx_pkt.pkt_rx_sop)
       begin
         $error("TX_PKT_SOP not matched with RX_PKT_SOP"); 
@@ -164,7 +173,22 @@ class xgemac_scoreboard;
         $display("Test Passed");
         success_count ++;
       end
+    if(h_cfg.check_inc_count == 7)
+      begin
     if(h_tx_pkt.pkt_tx_data != h_rx_pkt.pkt_rx_data)
+      begin
+        $error("7777TX_PKT_DATA not matched with RX_PKT_DATA");
+        $error("****PKT_TX_DATA : %0h != PKT_RX_DATA : %0h****", h_tx_pkt.pkt_tx_data, h_rx_pkt.pkt_rx_data);
+      end
+    else
+      begin
+        $display("Test Passed");
+        success_count ++;
+      end
+    end
+    else
+    begin
+      if(h_tx_pkt.pkt_tx_data != h_rx_pkt.pkt_rx_data)
       begin
         $error("TX_PKT_DATA not matched with RX_PKT_DATA");
         $error("****PKT_TX_DATA : %0h != PKT_RX_DATA : %0h****", h_tx_pkt.pkt_tx_data, h_rx_pkt.pkt_rx_data);
@@ -174,7 +198,24 @@ class xgemac_scoreboard;
         $display("Test Passed");
         success_count ++;
       end
+
+    end
+    if(h_cfg.check_inc_count == 7)
+    begin
     if(h_tx_pkt.pkt_tx_mod != h_rx_pkt.pkt_rx_mod)
+      begin
+        $error("7777TX_PKT_MOD not matched with RX_PKT_MOD");
+        $error("****PKT_TX_MOD : %0h != PKT_RX_MOD = %0h****", h_tx_pkt.pkt_tx_mod, h_rx_pkt.pkt_rx_mod);
+      end
+    else
+      begin
+        $display("Test Passed");
+        success_count++;
+      end
+    end
+    else
+    begin
+      if(h_tx_pkt.pkt_tx_mod != h_rx_pkt.pkt_rx_mod)
       begin
         $error("TX_PKT_MOD not matched with RX_PKT_MOD");
         $error("****PKT_TX_MOD : %0h != PKT_RX_MOD = %0h****", h_tx_pkt.pkt_tx_mod, h_rx_pkt.pkt_rx_mod);
@@ -184,6 +225,8 @@ class xgemac_scoreboard;
         $display("Test Passed");
         success_count++;
       end
+
+    end
     if(h_tx_pkt.pkt_tx_eop != h_rx_pkt.pkt_rx_eop)
       begin
         $error("TX_PKT_EOP not matched with RX_PKT_EOP");
@@ -194,17 +237,19 @@ class xgemac_scoreboard;
           $display("Test Passed");
           success_count++;
       end
-    end
+    h_cfg.check_inc_count++;
     $display("+++++++++++++SUCCESS_COUNT : %0d++++++++++++++++",success_count); 
   endfunction : check_exp_data_and_act_data
 
-
+/*
   //Check expected data and actual data for padding feature function
   function void check_exp_data_and_act_data_padding(xgemac_rx_pkt h_rx_pkt);
     xgemac_tx_pkt h_tx_pkt;
 
+    
     h_cfg.pad_act_count ++;
-    if(h_cfg.pad_act_count < h_cfg.trans_count)
+  
+    if(h_cfg.pad_act_count < h_cfg.tx_trans_count)
     begin
     h_tx_pkt = exp_pkt_queue.pop_front();
 
@@ -239,16 +284,16 @@ class xgemac_scoreboard;
     else
       begin
         $display("Padding test passed");
+        $display("++++++++++Pad_ACT_COUNT %0d+++++++++", h_cfg.pad_act_count);
       end
-
-      if(h_cfg.act_count == h_cfg.trans_count - 2)
-        h_cfg.act_count -= 1;
-
     end
     
-    else if(h_cfg.pad_act_count == h_cfg.trans_count)
+    else if(h_cfg.pad_act_count == h_cfg.tx_trans_count )
     begin
-      h_tx_pkt = exp_pkt_queue.pop_front();
+      if(exp_pkt_queue.size() > 0)
+      begin
+        h_tx_pkt = exp_pkt_queue.pop_front();
+      end
     if(h_tx_pkt.pkt_tx_sop != h_rx_pkt.pkt_rx_sop)
       begin
         $error("TX_PKT_SOP not matched with RX_PKT_SOP in padding feature"); 
@@ -284,10 +329,12 @@ class xgemac_scoreboard;
     else
       begin
         $display("Padding test passed");
+        $display("++++++++++Pad_ACT_COUNT %0d+++++++++", h_cfg.pad_act_count);
+
       end
     end
 
-    else
+    else if(h_cfg.pad_act_count > h_cfg.tx_trans_count)
     begin
       if(h_rx_pkt.pkt_rx_sop == 1)
       begin
@@ -297,35 +344,50 @@ class xgemac_scoreboard;
       begin
         $display("Padding test passed");
       end
-      if(h_rx_pkt.pkt_rx_data == 0)
+      if(h_cfg.pad_act_count != 8)
+      begin
+      if(h_rx_pkt.pkt_rx_data != 0)
       begin
         $error("RX_PKT_DATA is not valid in last packet of padding %0h", h_rx_pkt.pkt_rx_data);
+        $display("++++++++++Pad_ACT_COUNT %0d+++++++++", h_cfg.pad_act_count);
+
       end
       else
       begin
         $display("Padding test passed");
       end
+    end
+      if(h_cfg.pad_act_count == 8)
+      begin
       if(h_rx_pkt.pkt_rx_mod != 4)
       begin
         $error("RX_PKT_MOD is not valid in last packet of padding");
+        $display("++++++++++Pad_ACT_COUNT %0d+++++++++", h_cfg.pad_act_count);
+
       end
       else
       begin
         $display("Padding test passed");
       end
+      end
+      if(h_cfg.pad_act_count == 8)
+      begin
       if(h_rx_pkt.pkt_rx_eop != 1)
       begin
         $error("RX_PKT_EOP is not valid in last packet of padding");
+        $display("++++++++++Pad_ACT_COUNT %0d+++++++++", h_cfg.pad_act_count);
+
       end
       else
       begin
         $display("Padding test passed");
       end
+    end
 
     end
 
 
   endfunction : check_exp_data_and_act_data_padding
-
+*/
 
 endclass : xgemac_scoreboard

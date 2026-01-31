@@ -20,7 +20,12 @@ class xgemac_env;
   // xgmii reset driver instantiation
   rst_driver#(.RESET_PERIOD(`XGEMAC_TX_RX_RESET_PERIOD), .rst_type(xgemac_pkg :: NEG_RESET), .vif_t(xgmii_rst_vif_t)) xgmii_rst_drv;
 
-  
+  //xgemac reset generator
+  xgemac_reset_generator h_wb_rst_gen;
+
+  xgemac_reset_generator h_tx_rx_rst_gen;
+
+  xgemac_reset_generator h_xgmii_rst_gen;
 
   //xgemac tx pkt generator
   xgemac_generator h_xgemac_gen;
@@ -36,6 +41,9 @@ class xgemac_env;
 
   //rx interface monitor
   xgemac_rx_monitor rx_pkt_mon;
+
+  //xgemac reset monitor
+  xgemac_reset_monitor rst_mon;
 
   //wishbone generator
   wb_generator wb_gen;
@@ -61,6 +69,10 @@ class xgemac_env;
     tx_rx_clk_drv = new(h_cfg.tx_rx_clk_vif);
     xgmii_clk_drv = new(h_cfg.xgmii_clk_vif);
 
+    h_wb_rst_gen     = new(h_cfg);
+    h_tx_rx_rst_gen  = new(h_cfg);
+    h_xgmii_rst_gen  = new(h_cfg);
+
     wb_rst_drv    = new(h_cfg.wb_rst_vif);
     tx_rx_rst_drv = new(h_cfg.tx_rx_rst_vif);
     xgmii_rst_drv = new(h_cfg.xgmii_rst_vif);
@@ -72,6 +84,8 @@ class xgemac_env;
 
     tx_pkt_mon    = new(h_cfg);
     rx_pkt_mon    = new(h_cfg);
+    rst_mon       = new(h_cfg);
+
 
     wb_gen        = new(h_cfg);
 
@@ -81,6 +95,9 @@ class xgemac_env;
 
     h_scbd        = new(h_cfg);
 
+    h_wb_rst_gen.build();
+    h_tx_rx_rst_gen.build();
+    h_xgmii_rst_gen.build();
 
     h_xgemac_gen.build();
 
@@ -94,6 +111,7 @@ class xgemac_env;
     tx_pkt_mon.build();
     rx_pkt_mon.build();
     wb_mon.build();
+    rst_mon.build();
 
     h_scbd.build();
     
@@ -101,9 +119,19 @@ class xgemac_env;
 
   function void connect();
     $display("Inside ENVIRONMENT connect");
+    
     wb_clk_drv.connect();
     tx_rx_clk_drv.connect();
     xgmii_clk_drv.connect();
+
+    h_wb_rst_gen.connect();
+    h_tx_rx_rst_gen.connect();
+    h_xgmii_rst_gen.connect();
+
+    tx_rx_rst_drv.mbx = h_tx_rx_rst_gen.mbx;
+    wb_rst_drv.mbx    = h_wb_rst_gen.mbx;
+    xgmii_rst_drv.mbx = h_xgmii_rst_gen.mbx;
+
 
     wb_rst_drv.connect();
     tx_rx_rst_drv.connect();
@@ -115,11 +143,14 @@ class xgemac_env;
 
     tx_pkt_mon.connect();
     rx_pkt_mon.connect();
+    rst_mon.connect();
     
     h_scbd.connect();
 
     tx_pkt_drv.mbx = h_xgemac_gen.mbx;
     wb_drv.mbx     = wb_gen.mbx;
+
+    h_scbd.rst_mbx = rst_mon.mbx;
 
     h_scbd.tx_mbx  = tx_pkt_mon.mbx;
     h_scbd.rx_mbx  = rx_pkt_mon.mbx;
@@ -133,6 +164,9 @@ class xgemac_env;
     tx_rx_clk_drv.run();
     xgmii_clk_drv.run();
 
+    h_wb_rst_gen.run();
+    h_tx_rx_rst_gen.run();
+    h_xgmii_rst_gen.run();
     wb_rst_drv.run();
     tx_rx_rst_drv.run();
     xgmii_rst_drv.run();

@@ -77,11 +77,19 @@ program test_top(xgemac_clk_interface tx_rx_clk,
                                                $cast(h_base_test, h_pad_test);
                                              end
 
+        "xgemac_reset_test"                : begin
+                                               xgemac_reset_test h_rst_test;
+                                               h_rst_test = new(h_cfg);
+                                               $cast(h_base_test, h_rst_test);
+                                             end
+
         "wishbone_read_tx_enable_test"     : begin
                                                wishbone_read_tx_enable_test h_wb_test;
                                                h_wb_test = new(h_cfg);
                                                $cast(h_base_test, h_wb_test);
                                              end
+
+
                                                
 
       endcase

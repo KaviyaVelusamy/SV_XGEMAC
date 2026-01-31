@@ -101,8 +101,8 @@ class xgemac_tx_pkt_driver;
   //Run Task
   task run();
     forever begin
-      wait_for_reset_done();
       reset_input_signals();
+      wait_for_reset_done();
       drive_transfer();
     end
   endtask : run

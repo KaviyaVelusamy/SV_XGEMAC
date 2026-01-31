@@ -2,6 +2,7 @@ class rst_driver#(RESET_PERIOD, rst_type_t rst_type , type vif_t = int);
 
     vif_t vif;
     string REPORT_TAG = "RESET_DRIVER";
+    mailbox#(bit) mbx;
 
     //Constructor
     function new(vif_t vif);
@@ -36,14 +37,11 @@ class rst_driver#(RESET_PERIOD, rst_type_t rst_type , type vif_t = int);
 
     //Run Task
     task run();
-      vif.rst = rst_type;
-      @(posedge vif.clk);
-      vif.rst = ~rst_type;
-      repeat(RESET_PERIOD) begin
-        @(posedge vif.clk);
+      bit rx_indicator;
+      forever begin
+        mbx.get(rx_indicator);  
+        drive_reset_method();
       end
-      vif.rst = rst_type;    
-      
     endtask : run
 
 endclass: rst_driver

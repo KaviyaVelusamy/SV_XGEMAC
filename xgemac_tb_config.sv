@@ -57,12 +57,16 @@ class xgemac_tb_config;
   //Transaction count for direct test
   rand int unsigned trans_count;
 
-  int unsigned act_count;
+  int act_count;
+
+  int tx_trans_count;
 
   //frame trans_count for incremental test
   int inc_trans_count;
 
   int pad_act_count;
+
+  int check_inc_count;
 
   //start value for incremental test
   bit[`XGEMAC_TX_RX_DATA_WIDTH - 1 : 0] inc_start_value;

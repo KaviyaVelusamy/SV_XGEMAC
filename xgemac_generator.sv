@@ -23,56 +23,69 @@ class xgemac_generator;
   function void report();
   endfunction : report
 
-  //Reset generator
-  task generate_reset_stimulus();
-    rst_driver#(`XGEMAC_TX_RX_RESET_PERIOD, xgemac_pkg :: NEG_RESET, tx_rx_rst_vif_t) h_rst_driver;
-    h_rst_driver = new(h_cfg.tx_rx_rst_vif);
-    h_rst_driver.run();
-  endtask : generate_reset_stimulus
-
+ 
   //Generate Direct Stimulus and Put into Mailbox Task
   task generate_direct_stimulus_and_put_into_mbx();
 
     int unsigned count;
     xgemac_tx_pkt h_tx_pkt, h_tx_cl_pkt;
 
-    repeat(h_cfg.trans_count)
+    
+    $display("~~~~~~~~~~~~~H_CFG.ACT_COUNT : %0d~~~~~~~~~~~~", h_cfg.act_count);
+
+    if(h_cfg.trans_count < 8)
+    begin
+    int pad_packet_count, pad_byte_count;
+
+    pad_byte_count = `MIN_PADDING_BYTE - (h_cfg.trans_count * `BYTE);
+
+    pad_packet_count = (pad_byte_count / `BYTE) + 1;
+ 
+    h_cfg.act_count = h_cfg.act_count - pad_packet_count;
+
+    h_cfg.tx_trans_count = h_cfg.trans_count;
+
+    h_cfg.check_inc_count = 0;
+
+    for(int i = 1 ; i <= 8; i++)
       begin
         h_tx_pkt = new();
-        h_tx_pkt.pkt_tx_data = `XGEMAC_TX_RX_DATA_WIDTH'h FFFF_FFFF_FFFF_FFFF;
 
-        if(count == 0)
-          begin
-            h_tx_pkt.pkt_tx_sop  =  1;
-          end
-        else
-          begin
-            h_tx_pkt.pkt_tx_sop = 0;
-          end
+        h_tx_pkt.pkt_tx_sop = (i == 1) ? 1 : 0;
+        h_tx_pkt.pkt_tx_eop = (i == 8) ? 1 : 0;
+        h_tx_pkt.pkt_tx_mod = (i == 8) ? 0 : 0;
 
-        count++;
-
-        if(count == h_cfg.trans_count)
+        if(i <= h_cfg.trans_count)
         begin
-          h_tx_pkt.pkt_tx_eop = 1;
-          h_tx_pkt.pkt_tx_mod = 4;
+          h_tx_pkt.pkt_tx_data = `XGEMAC_TX_RX_DATA_WIDTH'h AAAA_BBBB_CCCC_DDDD;
         end
         else
         begin
-          h_tx_pkt.pkt_tx_eop = 0;
-          h_tx_pkt.pkt_tx_mod = 0;
+          h_tx_pkt.pkt_tx_data = 0;
         end
 
-        mbx.put(h_tx_pkt);
-     
-      /*  $display("((((((((((((((Actual Count : %0h))))))))))))", h_cfg.act_count);
-
-        if(count == 4)
-          begin
-           generate_reset_stimulus();
-          end
-          */
+        $cast(h_tx_cl_pkt, h_tx_pkt.clone());
+      
+        mbx.put(h_tx_cl_pkt);
       end
+    end
+    else
+    begin
+      h_cfg.tx_trans_count = h_cfg.trans_count;
+      for(int i = 1; i <= h_cfg.trans_count; i++)
+      begin
+        h_tx_pkt = new();
+
+        h_tx_pkt.pkt_tx_data = `XGEMAC_TX_RX_DATA_WIDTH'h AAAA_BBBB_CCCC_DDDD;
+        h_tx_pkt.pkt_tx_sop = (i == 1) ? 1 : 0;
+        h_tx_pkt.pkt_tx_eop = (i == h_cfg.trans_count) ? 1 : 0;
+        h_tx_pkt.pkt_tx_mod = (i == h_cfg.trans_count) ? 0 : 0;
+      
+        $cast(h_tx_cl_pkt, h_tx_pkt.clone());
+        mbx.put(h_tx_pkt);
+
+      end
+    end
   endtask : generate_direct_stimulus_and_put_into_mbx
 
   //Generate Incremental Stimulus and put into Mailbox
@@ -89,11 +102,45 @@ class xgemac_generator;
     copy_trans_count = h_cfg.trans_count;
     start_value      = h_cfg.inc_start_value;
 
+    h_cfg.tx_trans_count = h_cfg.inc_trans_count;
     while(copy_trans_count > 0)
       begin
         temp_loop_count++;
         current_pass = (copy_trans_count >= h_cfg.inc_trans_count) ? h_cfg.inc_trans_count : copy_trans_count;
 
+        if(current_pass < 8)
+        begin
+          int pad_packet_count, pad_byte_count;
+
+          pad_byte_count = `MIN_PADDING_BYTE - (current_pass * `BYTE);
+
+          pad_packet_count = (pad_byte_count / `BYTE) + 1;
+
+          h_cfg.act_count = h_cfg.act_count - pad_packet_count;
+          h_cfg.tx_trans_count = current_pass;
+          h_cfg.check_inc_count = 0;
+          for(int i = 0; i < 8; i++)
+          begin
+            h_tx_pkt = new();
+            h_tx_pkt.pkt_tx_sop  = (i == 0) ? 1 : 0;
+            h_tx_pkt.pkt_tx_eop  = (i == 7) ? 1 : 0;
+            h_tx_pkt.pkt_tx_mod  = (h_tx_pkt.pkt_tx_eop == 1 ) ? 0 : 0;
+            if(i+1 <= current_pass)
+            begin
+              h_tx_pkt.pkt_tx_data = start_value + i;
+            end
+            else
+            begin
+              h_tx_pkt.pkt_tx_data = 0;
+            end
+            $display("^^^^^^^^^^^pkt_tx_data : %0h^^^^^^^^^^^^", h_tx_pkt.pkt_tx_data);
+            $cast(h_tx_cl_pkt, h_tx_pkt.clone());
+            mbx.put(h_tx_cl_pkt);
+          end
+            start_value += current_pass;
+        end
+        else
+        begin
         for(int i = 0; i< current_pass; i++) 
           begin
             h_tx_pkt = new();
@@ -106,8 +153,10 @@ class xgemac_generator;
             $cast(h_tx_cl_pkt, h_tx_pkt.clone());
             mbx.put(h_tx_cl_pkt);
           end
+           start_value += current_pass;
 
-        start_value      += current_pass;
+        end
+
         copy_trans_count -= current_pass;
 
      end
@@ -117,7 +166,6 @@ class xgemac_generator;
 
   //Generate Random Stimulus and Put into mailbox()
   task generate_random_stimulus_and_put_into_mbx();
-   // $display("Inside Fully Random Test");
     xgemac_tx_pkt h_tx_pkt, h_tx_cl_pkt;
 
     int temp_loop_count = 0;
@@ -133,38 +181,39 @@ class xgemac_generator;
       begin
         temp_loop_count ++;
 
+      if(copy_trans_count % 2 == 1)
+        min_reserve = `MIN_RESERVED_EVEN;
+      else
+        min_reserve = `MIN_RESERVED_ODD;
+
+      if(copy_trans_count > min_reserve) 
+      begin
+        max_allowed = copy_trans_count - min_reserve;
+
         if(copy_trans_count % 2 == 1)
-       min_reserve = 14;
-    else
-      min_reserve = 16;
-
-    if(copy_trans_count > min_reserve) begin
-      max_allowed = copy_trans_count - min_reserve;
-
-    if (copy_trans_count % 2 == 1) begin
-      if (!std::randomize(rand_trans_count) with {
-          rand_trans_count >= 7;
+        begin
+          if(!std::randomize(rand_trans_count) with {
+          rand_trans_count >= 2;
           rand_trans_count <= max_allowed;
           rand_trans_count % 2 == 1;
-        })
-      rand_trans_count = copy_trans_count;
-      end
-      else begin
-      if (!std::randomize(rand_trans_count) with {
-          rand_trans_count >= 8;
+          })
+            rand_trans_count = copy_trans_count;
+        end
+        else 
+        begin
+          if (!std::randomize(rand_trans_count) with {
+          rand_trans_count >= 2;
           rand_trans_count <= max_allowed;
           rand_trans_count % 2 == 0;
-        })
-      rand_trans_count = copy_trans_count;
-     end
-    end
-        else
-          rand_trans_count = copy_trans_count;
+          })
+           rand_trans_count = copy_trans_count;
+        end
+      end
+      else
+        rand_trans_count = copy_trans_count;
 
         current_pass = rand_trans_count;
  
-
-      //  current_pass = (rand_trans_count <= copy_trans_count) ? rand_trans_count : copy_trans_count;
 
         $display("*********");
         $display();
@@ -172,30 +221,73 @@ class xgemac_generator;
         $display();
         $display("*********");
 
+        if(current_pass < 8)
+        begin
+          int pad_packet_count, pad_byte_count;
 
-        for(int i = 0; i < current_pass ; i++)
-          begin
-            h_tx_pkt = new();
-            if(i == 0)
-              begin
-                h_tx_pkt.pkt_tx_sop = 1;
-              end
-            else
-              begin
-                h_tx_pkt.pkt_tx_sop = 0;
-              end
-            
-            h_tx_pkt.pkt_tx_data = {$urandom_range(0, 'hFFFF_FFFF_FFFF_FFFF), $urandom_range(0, 'hFFFF_FFFF_FFFF_FFFF)};
+          pad_byte_count = `MIN_PADDING_BYTE - (current_pass * `BYTE);
 
-            if(i == (current_pass - 1))
+          pad_packet_count = (pad_byte_count / `BYTE) + 1;
+
+          h_cfg.act_count = h_cfg.act_count - pad_packet_count;
+          h_cfg.tx_trans_count = current_pass;
+          h_cfg.check_inc_count = 0;
+
+          for(int i = 1; i <= 8; i++)
+            begin
+              h_tx_pkt = new();
+
+              h_tx_pkt.pkt_tx_sop = (i == 1) ? 1 : 0;
+              h_tx_pkt.pkt_tx_eop = (i == 8) ? 1 : 0;
+                          
+              if(i <= current_pass)
               begin
-                h_tx_pkt.pkt_tx_eop = 1;
-                h_tx_pkt.pkt_tx_mod = $urandom_range(5,7);
+                h_tx_pkt.pkt_tx_data = {$urandom_range(0,'hFFFF_FFFF_FFFF_FFFF), $urandom_range(0,'hFFFF_FFFF_FFFF_FFFF)};
+              end
+              else
+              begin
+                h_tx_pkt.pkt_tx_data = 'h0;
+              end
+              h_tx_pkt.pkt_tx_mod = 0;
+
+           /*   if(i == current_pass - 1)
+              begin
+                h_tx_pkt.pkt_tx_mod = $urandom_range(0,7);
                // void'(std :: randomize(h_tx_pkt.pkt_tx_mod) with { h_tx_pkt.pkt_tx_mod inside {[6:7]}; });
               end
-            else
+              else
               begin
-                h_tx_pkt.pkt_tx_eop = 0;
+                h_tx_pkt.pkt_tx_mod = 0;
+              end
+*/
+              $cast(h_tx_cl_pkt, h_tx_pkt.clone());
+              $display("Before putting in mailbox from generator, temp_loop_count = %0d, i : %0d, current_pass : %0d, time : %0t", temp_loop_count, i, current_pass, $time);
+              $display("################");
+              $display();
+              h_tx_cl_pkt.display();
+              $display();
+              $display("################");
+              mbx.put(h_tx_cl_pkt); 
+            end
+          end
+          else
+          begin
+            for(int i = 1; i <= current_pass; i++)
+            begin
+              h_tx_pkt = new();
+
+              h_tx_pkt.pkt_tx_sop = (i == 1) ? 1 : 0;
+              h_tx_pkt.pkt_tx_eop = (i == current_pass) ? 1 : 0;
+                          
+              h_tx_pkt.pkt_tx_data = {$urandom_range(0,'hFFFF_FFFF_FFFF_FFFF), $urandom_range(0,'hFFFF_FFFF_FFFF_FFFF)};
+             
+              if(i == current_pass)
+              begin
+                h_tx_pkt.pkt_tx_mod = $urandom_range(0,7);
+               // void'(std :: randomize(h_tx_pkt.pkt_tx_mod) with { h_tx_pkt.pkt_tx_mod inside {[6:7]}; });
+              end
+              else
+              begin
                 h_tx_pkt.pkt_tx_mod = 0;
               end
 
@@ -206,14 +298,18 @@ class xgemac_generator;
               h_tx_cl_pkt.display();
               $display();
               $display("################");
-              mbx.put(h_tx_cl_pkt);
+              mbx.put(h_tx_cl_pkt); 
+            end
 
-        
           end
+
+
           copy_trans_count -= current_pass;          
       end
 
   endtask : generate_random_stimulus_and_put_into_mbx
+
+
 
   //padding test
   task generate_padding_stimulus_and_put_into_mbx();
