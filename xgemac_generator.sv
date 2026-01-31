@@ -181,10 +181,12 @@ class xgemac_generator;
       begin
         temp_loop_count ++;
 
+       
       if(copy_trans_count % 2 == 1)
         min_reserve = `MIN_RESERVED_EVEN;
       else
         min_reserve = `MIN_RESERVED_ODD;
+      
 
       if(copy_trans_count > min_reserve) 
       begin

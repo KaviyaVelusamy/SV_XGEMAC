@@ -125,7 +125,7 @@ class xgemac_fully_random_test extends xgemac_base_test;
   endfunction : new
 
   function void set_test_specific_configurations();
-     h_cfg.trans_count = $urandom_range(0,25); 
+     h_cfg.trans_count = $urandom_range(2,99); 
   endfunction : set_test_specific_configurations
 
   task give_stimulus();
