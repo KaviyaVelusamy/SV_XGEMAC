@@ -164,12 +164,13 @@ class xgemac_env;
     tx_rx_clk_drv.run();
     xgmii_clk_drv.run();
 
-    h_wb_rst_gen.run();
-    h_tx_rx_rst_gen.run();
-    h_xgmii_rst_gen.run();
     wb_rst_drv.run();
     tx_rx_rst_drv.run();
     xgmii_rst_drv.run();
+
+    wb_rst_drv.drive_reset_method();
+    tx_rx_rst_drv.drive_reset_method();
+    xgmii_rst_drv.drive_reset_method();
 
     tx_pkt_drv.run();
     rx_pkt_drv.run();
@@ -178,6 +179,7 @@ class xgemac_env;
 
     tx_pkt_mon.run();
     rx_pkt_mon.run();
+    rst_mon.run();
 
 
     h_scbd.run();

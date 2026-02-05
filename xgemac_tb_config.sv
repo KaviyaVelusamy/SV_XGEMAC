@@ -81,8 +81,6 @@ class xgemac_tb_config;
   rand int read_enable_delay;
 
 
- // constraint c { trans_count < 500 };
-
   //Constructor
   function new();
     $display("%s : Constructor", REPORT_TAG);

@@ -52,20 +52,29 @@ class xgemac_tx_pkt_driver;
     join_any
 
     foreach(p[i]) begin
-      $display("###############HI##############");
-      p[i].kill();
+      if(p[i] != null)
+        p[i].kill();
     end
 
   endtask : drive_transfer
 
+
+
   //Get and drive Task
   task get_and_drive();
     xgemac_tx_pkt h_tx_pkt, h_tx_cl_pkt;
+    int temp_count;
     forever
     begin
       mbx.get(h_tx_pkt);
-      $display("Reset handling");
+   /*   if(vif.rst === 0)
+      begin
+        continue;
+      end */
+
+      temp_count++;
       $cast(h_tx_cl_pkt, h_tx_pkt.clone());
+      $display("From driver to pins: drive_count : %0d", temp_count);
       h_tx_cl_pkt.display();
       drive_into_pins(h_tx_cl_pkt);
      
@@ -78,6 +87,7 @@ class xgemac_tx_pkt_driver;
       //FIXME $display("%%%%%%%%%%%%Data going to drive%%%%%%%%");
       //FIXME $display("PKT_TX_FULL(DR_CB) : %0b time : %0t", vif.dr_cb.pkt_tx_full, $time);
       //FIXME$display("PKT_TX_FULL(MR_CB) : %0b time : %0t", vif.mr_cb.pkt_tx_full, $time);
+
       vif.dr_cb.pkt_tx_val  <= 1;
       vif.dr_cb.pkt_tx_data <= h_tx_pkt.pkt_tx_data;
       vif.dr_cb.pkt_tx_sop  <= h_tx_pkt.pkt_tx_sop;

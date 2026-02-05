@@ -23,19 +23,25 @@ class xgemac_reset_monitor;
   function void report();
   endfunction : report
 
+  task wait_for_reset_done();
+    wait(vif.rst === 0);
+    @(posedge vif.rst);
+  endtask : wait_for_reset_done
+
   task wait_for_reset();
     @(negedge vif.rst);
+    mbx.put('b1);
   endtask : wait_for_reset
+
+  task collect_transfer();
+    wait_for_reset();
+  endtask : collect_transfer
 
   task run();
     forever
     begin
-      fork
-      begin
-        wait_for_reset();
-      end
-    join
-    mbx.put('b1);
+      wait_for_reset_done();
+      collect_transfer();
     end
   endtask : run
 

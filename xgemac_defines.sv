@@ -19,8 +19,8 @@
 `define XGEMAC_WB_RESET_PERIOD 2
 
 //Random Test minimum reserve and allow maximum
-`define MIN_RESERVED_ODD   2
-`define MIN_RESERVED_EVEN  3
+`define MIN_RESERVED_ODD   3
+`define MIN_RESERVED_EVEN  2
 
 //timeout
 `define TIMEOUT 10000

@@ -52,17 +52,8 @@ class xgemac_rx_pkt_driver;
   endtask : wait_and_drive
 
   task drive_into_pins();
-  
-
-      @(posedge vif.clk);  
-      vif.dr_cb.pkt_rx_ren <= 1;
-      //@(posedge vif.clk);
-     // wait(vif.mr_cb.pkt_rx_eop === 1);
-      //@(posedge vif.clk);
-    //  reset_input_signals();
-    
-  //  @(posedge vif.clk);
-   // reset_input_signals();
+    @(posedge vif.clk);  
+    vif.dr_cb.pkt_rx_ren <= 1;
   endtask : drive_into_pins
 
   task drive_transfer();

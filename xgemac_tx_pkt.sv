@@ -21,7 +21,7 @@ class xgemac_tx_pkt;
   endfunction : copy
 
   function void display();
-    $display("Inside TX Packet --> time : %0t", $time);
+   // $display("Inside TX Packet --> time : %0t", $time);
     $display("Value of PKT_TX_DATA : %0h", pkt_tx_data);
     $display("Value of PKT_TX_SOP : %0h", pkt_tx_sop);
     $display("Value of PKT_TX_EOP : %0h", pkt_tx_eop);

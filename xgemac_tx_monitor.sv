@@ -31,7 +31,7 @@ class xgemac_tx_monitor;
 
   //Wait for reset task
   task wait_for_reset();
-    @(posedge vif.rst);
+    @(negedge vif.rst);
   endtask : wait_for_reset
 
   //Wait for reset done task
@@ -43,6 +43,7 @@ class xgemac_tx_monitor;
   //Collect from vif
   task collect_from_vif();
     xgemac_tx_pkt h_tx_pkt, h_tx_cl_pkt;
+    int temp_count = 0;
     forever begin
     if(vif.mr_cb.pkt_tx_val == 1)
     begin
@@ -52,7 +53,8 @@ class xgemac_tx_monitor;
       h_tx_pkt.pkt_tx_mod  = vif.mr_cb.pkt_tx_mod;
       h_tx_pkt.pkt_tx_eop  = vif.mr_cb.pkt_tx_eop;
       $cast(h_tx_cl_pkt, h_tx_pkt.clone());
-      //FIXME
+      temp_count++;
+      $display("From input monitor to scoreboard: ip_mon_count : %0d", temp_count);
       h_tx_cl_pkt.display();
       mbx.put(h_tx_cl_pkt);
     end

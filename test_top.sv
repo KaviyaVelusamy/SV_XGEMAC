@@ -71,17 +71,50 @@ program test_top(xgemac_clk_interface tx_rx_clk,
                                                $cast(h_base_test, h_f_rand_test);
                                              end
 
-        "xgemac_padding_test"              : begin   
-                                               xgemac_padding_test h_pad_test;
-                                               h_pad_test = new(h_cfg);
-                                               $cast(h_base_test, h_pad_test);
-                                             end
 
-        "xgemac_reset_test"                : begin
-                                               xgemac_reset_test h_rst_test;
+        "xgemac_tx_reset_test"             : begin
+                                               xgemac_tx_reset_test h_rst_test;
                                                h_rst_test = new(h_cfg);
                                                $cast(h_base_test, h_rst_test);
                                              end
+
+        "xgemac_tx_inc_reset_test"         : begin
+                                               xgemac_tx_inc_reset_test h_rst_test;
+                                               h_rst_test = new(h_cfg);
+                                               $cast(h_base_test, h_rst_test);
+                                             end
+
+        "xgemac_tx_random_reset_test"      : begin
+                                               xgemac_tx_random_reset_test h_rst_test;
+                                               h_rst_test = new(h_cfg);
+                                               $cast(h_base_test, h_rst_test);
+                                             end
+
+        "xgemac_rx_reset_test"              : begin
+                                               xgemac_rx_reset_test h_rst_test;
+                                               h_rst_test = new(h_cfg);
+                                               $cast(h_base_test, h_rst_test);
+                                             end
+
+        "xgemac_without_sop_test"           : begin
+                                               xgemac_without_sop_test h_sop_test;
+                                               h_sop_test = new(h_cfg);
+                                               $cast(h_base_test, h_sop_test);
+                                             end
+
+        "xgemac_without_eop_test"           : begin
+                                               xgemac_without_eop_test h_eop_test;
+                                               h_eop_test = new(h_cfg);
+                                               $cast(h_base_test, h_eop_test);
+                                             end
+
+        "xgemac_without_sop_eop_test"       : begin
+                                               xgemac_without_sop_eop_test h_sop_eop_test;
+                                               h_sop_eop_test = new(h_cfg);
+                                               $cast(h_base_test, h_sop_eop_test);
+                                             end
+
+
 
         "wishbone_read_tx_enable_test"     : begin
                                                wishbone_read_tx_enable_test h_wb_test;

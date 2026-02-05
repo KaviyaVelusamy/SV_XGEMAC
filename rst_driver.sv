@@ -2,7 +2,7 @@ class rst_driver#(RESET_PERIOD, rst_type_t rst_type , type vif_t = int);
 
     vif_t vif;
     string REPORT_TAG = "RESET_DRIVER";
-    mailbox#(bit) mbx;
+    mailbox#(reset_pkt) mbx;
 
     //Constructor
     function new(vif_t vif);
@@ -19,29 +19,41 @@ class rst_driver#(RESET_PERIOD, rst_type_t rst_type , type vif_t = int);
       $display("%s : Connect Function", REPORT_TAG);
     endfunction : connect
 
-    //wait for reset task
-    task wait_for_reset();
-      @(negedge vif.rst == 0);
-    endtask : wait_for_reset
-
+    
     //drive reset method
     task drive_reset_method();
-      vif.rst = rst_type;
+      reset_pkt h_rst_pkt, h_rst_cl_pkt;
+      forever begin
+      mbx.get(h_rst_pkt);
+      $cast(h_rst_cl_pkt, h_rst_pkt);
       @(posedge vif.clk);
       vif.rst = ~rst_type;
-      repeat(RESET_PERIOD) begin
+      repeat(h_rst_cl_pkt.rst_period) begin
         @(posedge vif.clk);
       end
-      vif.rst = rst_type; 
+      vif.rst = rst_type;
+      end
+
     endtask : drive_reset_method
 
-    //Run Task
+  /*  //Run Task
     task run();
       bit rx_indicator;
       forever begin
         mbx.get(rx_indicator);  
         drive_reset_method();
       end
+    endtask : run */
+
+    //Run Task
+    task run();
+      vif.rst = rst_type;
+      @(posedge vif.clk);
+      vif.rst = ~rst_type;
+      repeat(RESET_PERIOD) begin
+        @(posedge vif.clk);
+      end
+      vif.rst = rst_type;
     endtask : run
 
 endclass: rst_driver
